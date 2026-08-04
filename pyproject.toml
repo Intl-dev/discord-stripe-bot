@@ -1,0 +1,11 @@
+[project]
+name = "discord-stripe-bot"
+version = "0.1.0"
+requires-python = ">=3.14"
+dependencies = [
+    "aiosqlite>=0.22.1",
+    "discord-py>=2.7.1",
+    "fastapi>=0.141.1",
+    "python-dotenv>=1.2.2",
+    "requests>=2.34.2",
+]
