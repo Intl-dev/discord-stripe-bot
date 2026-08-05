@@ -2,8 +2,8 @@ import aiosqlite
 import asyncio
 
 async def create_table():
-    db = await aiosqlite.connect("database.db")
-    await db.executescript("""
+    async with aiosqlite.connect("database.db") as db:
+        await db.executescript("""
                 CREATE TABLE IF NOT EXISTS profiles (
                     profile_name TEXT PRIMARY KEY,
                     discord_id INTEGER NOT NULL
@@ -17,12 +17,10 @@ async def create_table():
                     status TEXT DEFAULT 'UNPAID'
                 )
             """)
-    await db.executescript("""
-    INSERT INTO invoices (order_id, discord_id, amount_usd, stripe_url)
-    VALUES (12345, 123456789, 1, 'fakeurl')
-    """)
-    await db.commit()
-    await db.close()
+        await db.executescript(""" 
+        INSERT INTO invoices (order_id, discord_id, amount_usd, stripe_url)
+        VALUES (12345, 123456789, 1, '/fakeurl')""") #this is here to test check_unpaid
+        await db.commit()
 
 async def check_unpaid():
     async with aiosqlite.connect("database.db") as db:
@@ -35,10 +33,6 @@ async def check_unpaid():
                 users.append(row[0])
 
         return users
-
-
-
-
 
 if __name__ == "__main__":
     asyncio.run(create_table())
