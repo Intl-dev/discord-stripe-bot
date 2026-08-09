@@ -2,10 +2,15 @@ import os
 import fastapi
 import httpx
 import dotenv
+
+
 from database import insert_invoice
 
 dotenv.load_dotenv()
 discord_webhook = os.getenv('DISCORD_WEBHOOK')
+guild_id = os.getenv('GUILD_ID')
+role_id = os.getenv('ROLE_ID')
+bot_token = os.getenv('BOT_TOKEN')
 app = fastapi.FastAPI()
 
 @app.post("/webhook")
@@ -41,6 +46,28 @@ async def webhook(payload: dict):
         ],
     }
     await insert_invoice(str(payment_id), int(user_id), float(amount), str(payment_url), str(status))
+
+    async def assign_role(discord_id: int, status: str):
+        if status == "PAID":
+            url = f"https://discord.com/api/v10/guilds/{guild_id}/members/{discord_id}/roles/{role_id}"
+            auth = {"Authorization": f"Bot {bot_token}"}
+            async with httpx.AsyncClient() as client:
+                assign_response = await client.put(url, headers=auth)
+                print(f"role assigment{assign_response.status_code}")
+        else:
+            print("cannot assign role")
+
+    async def send_dm(user_id: int):
+        headers = {"Authorization": f"Bot {bot_token}"}
+        text = f"You have been assigned the role of VIP"
+        async with httpx.AsyncClient() as client:
+            channel = await client.post("https://discord.com/api/v10/users/@me/channels", headers=headers, json={"recipient_id": str(user_id)})
+            msg = await client.post(f"https://discord.com/api/v10/channels/{channel.json()['id']}/messages", headers=headers, json={"content": text})
+            print(f"message status code: {msg.status_code}")
+
+    await send_dm(user_id)
+    await assign_role(user_id, status)
+
     async with httpx.AsyncClient() as client:
         discord_request = await client.post(discord_webhook, json=discord_payload)
         print(discord_request.status_code)
