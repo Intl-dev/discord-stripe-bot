@@ -27,7 +27,7 @@ def generate_fake_payment():
                 "payment_url": payment_url,
                 "amount": chosen_amount,
                 "currency": "usd",
-                "status": "succeeded",
+                "status": "failed",
                 "receipt_email": chosen_email,
                 "description": "Pro Plan Subscription"
             }

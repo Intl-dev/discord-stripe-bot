@@ -58,12 +58,22 @@ async def webhook(payload: dict):
             print("cannot assign role")
 
     async def send_dm(user_id: int):
-        headers = {"Authorization": f"Bot {bot_token}"}
-        text = f"You have been assigned the role of VIP"
-        async with httpx.AsyncClient() as client:
-            channel = await client.post("https://discord.com/api/v10/users/@me/channels", headers=headers, json={"recipient_id": str(user_id)})
-            msg = await client.post(f"https://discord.com/api/v10/channels/{channel.json()['id']}/messages", headers=headers, json={"content": text})
-            print(f"message status code: {msg.status_code}")
+        if status == "PAID":
+            headers = {"Authorization": f"Bot {bot_token}"}
+            text = f"You have been assigned the role of VIP"
+            async with httpx.AsyncClient() as client:
+                channel = await client.post("https://discord.com/api/v10/users/@me/channels", headers=headers, json={"recipient_id": str(user_id)})
+                msg = await client.post(f"https://discord.com/api/v10/channels/{channel.json()['id']}/messages", headers=headers, json={"content": text})
+                print(f"message status code: {msg.status_code}")
+        else:
+            headers = {"Authorization": f"Bot {bot_token}"}
+            text = f"Your payment failed, your VIP role has not been assigned"
+            async with httpx.AsyncClient() as client:
+                channel = await client.post("https://discord.com/api/v10/users/@me/channels", headers=headers,
+                                            json={"recipient_id": str(user_id)})
+                msg = await client.post(f"https://discord.com/api/v10/channels/{channel.json()['id']}/messages",
+                                        headers=headers, json={"content": text})
+                print(f"message status code: {msg.status_code}")
 
     await send_dm(user_id)
     await assign_role(user_id, status)
