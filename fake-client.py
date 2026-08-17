@@ -8,11 +8,12 @@ dotenv.load_dotenv()
 discord_id = os.getenv("DISCORD_ID")
 #this is basically my pc
 WEBHOOK_URL = "http://127.0.0.1:8000/webhook"
+STRIPE_CLIENT = os.getenv("STRIPE_CLIENT")
 
 def generate_fake_payment():
     """Creates a test JSON (with stripe integration) for the local server (AKA my pc) to process it"""
 
-    client = StripeClient("sk_test_BQokikJOvBiI2HlWgH4olfQ2")
+    client = StripeClient(STRIPE_CLIENT)
     customer = client.v1.customers.create({"metadata": {"order_id": "6735"}})
     status = "PAID" #this is a placeholder to have a status for the webhook
     return {"customer": customer.to_dict(),
