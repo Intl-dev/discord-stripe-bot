@@ -3,7 +3,7 @@ import fastapi
 import httpx
 import dotenv
 from database import insert_invoice
-from stripe import StripeClient
+
 
 dotenv.load_dotenv()
 discord_webhook = os.getenv('DISCORD_WEBHOOK')
@@ -56,16 +56,15 @@ async def webhook(response: dict):
         else:
             print("cannot assign role")
 
-    async def send_dm(user_id: int):
+    async def send_dm(discord_id: int):
         if status == "PAID":
             headers = {"Authorization": f"Bot {bot_token}"}
             text = f"You have been assigned the role of VIP"
             async with httpx.AsyncClient() as client:
-                channel = await client.post("https://discord.com/api/v10/users/@me/channels", headers=headers, json={"recipient_id": str(user_id)})
+                channel = await client.post("https://discord.com/api/v10/users/@me/channels", headers=headers, json={"recipient_id": str(discord_id)})
                 msg = await client.post(f"https://discord.com/api/v10/channels/{channel.json()['id']}/messages", headers=headers, json={"content": text})
                 print(f"message status code: {msg.status_code}")
-            await send_dm(user_id)
-            await assign_role(user_id, status)
+
 
         else:
             headers = {"Authorization": f"Bot {bot_token}"}
@@ -77,6 +76,8 @@ async def webhook(response: dict):
                                         headers=headers, json={"content": text})
                 print(f"message status code: {msg.status_code}")
 
+    await send_dm(discord_id)
+    await assign_role(discord_id, status)
 
 
     async with httpx.AsyncClient() as client:
