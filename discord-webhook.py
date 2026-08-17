@@ -2,41 +2,40 @@ import os
 import fastapi
 import httpx
 import dotenv
-
-
 from database import insert_invoice
+from stripe import StripeClient
 
 dotenv.load_dotenv()
 discord_webhook = os.getenv('DISCORD_WEBHOOK')
+discord_id = os.getenv('DISCORD_ID')
 guild_id = os.getenv('GUILD_ID')
 role_id = os.getenv('ROLE_ID')
 bot_token = os.getenv('BOT_TOKEN')
 app = fastapi.FastAPI()
 
 @app.post("/webhook")
-async def webhook(payload: dict):
+async def webhook(response: dict):
     """Receives the json from fake-client.py, creates an embed with its info and sends it to the discord webhook"""
-    user_id = payload["data"]["object"]["discord_id"]
-    payment_id = payload["data"]["object"]["payment_id"]
-    payment_url = payload["data"]["object"]["payment_url"]
-    email = payload["data"]["object"]["receipt_email"]
-    if payload["data"]["object"]["status"] == "succeeded":
-        status = "PAID"
-    else:
-        status = payload["data"]["object"]["status"]
+    customer = response["customer"]
+    status = response["status"]
+    payment_url = None
+    order_id = customer["metadata"]["order_id"]
+    email = customer["email"]
+    amount = customer["balance"] / 100 #the amount is in cents so we convert it
+    currency = customer["currency"]
+    description = customer["description"]
+    customer_id = customer["id"]
 
-    amount = payload['data']['object']['amount'] / 100 #the amount is in cents so we convert it
-    currency = payload['data']['object']['currency']
     discord_payload = {
         "username": "Spidey Bot",
         "embeds": [
             {
-                "title": f"Payment {payload['data']['object']['description']}",
+                "title": f"Payment {description}",
                 "description": "A (test) payment from stripe has been done",
                 "color": 3447003,
                 "fields": [
-                    {"name": "User ID", "value": f"{user_id}", "inline": True},
-                    {"name": "Payment ID", "value": f"{payment_id}", "inline": True},
+                    {"name": "User ID", "value": f"{customer_id}", "inline": True},
+                    {"name": "Payment ID", "value": f"{order_id}", "inline": True},
                     {"name": "Payment URL", "value": f"{payment_url}", "inline": True},
                     {"name": "email", "value": f"{email}", "inline": True},
                     {"name": "status", "value": f"{status}", "inline": True},
@@ -45,7 +44,7 @@ async def webhook(payload: dict):
             }
         ],
     }
-    await insert_invoice(str(payment_id), int(user_id), float(amount), str(payment_url), str(status))
+    await insert_invoice(str(order_id), str(customer_id), float(amount), str(payment_url), str(status))
 
     async def assign_role(discord_id: int, status: str):
         if status == "PAID":
@@ -65,6 +64,9 @@ async def webhook(payload: dict):
                 channel = await client.post("https://discord.com/api/v10/users/@me/channels", headers=headers, json={"recipient_id": str(user_id)})
                 msg = await client.post(f"https://discord.com/api/v10/channels/{channel.json()['id']}/messages", headers=headers, json={"content": text})
                 print(f"message status code: {msg.status_code}")
+            await send_dm(user_id)
+            await assign_role(user_id, status)
+
         else:
             headers = {"Authorization": f"Bot {bot_token}"}
             text = f"Your payment failed, your VIP role has not been assigned"
@@ -75,8 +77,7 @@ async def webhook(payload: dict):
                                         headers=headers, json={"content": text})
                 print(f"message status code: {msg.status_code}")
 
-    await send_dm(user_id)
-    await assign_role(user_id, status)
+
 
     async with httpx.AsyncClient() as client:
         discord_request = await client.post(discord_webhook, json=discord_payload)

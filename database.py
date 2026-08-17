@@ -11,7 +11,7 @@ async def create_table():
 
                 CREATE TABLE IF NOT EXISTS invoices (
                     order_id TEXT PRIMARY KEY,
-                    discord_id INT NOT NULL,
+                    customer_id TEXT NOT NULL,
                     amount_usd REAL NOT NULL,
                     stripe_url TEXT,
                     status TEXT DEFAULT 'UNPAID'
@@ -21,7 +21,7 @@ async def create_table():
 
 async def check_unpaid():
     async with aiosqlite.connect("database.db") as db:
-        sql = "SELECT discord_id FROM invoices WHERE status != 'PAID'"
+        sql = "SELECT customer_id FROM invoices WHERE status != 'PAID'"
 
         async with db.execute(sql) as cursor:
             rows = await cursor.fetchall()
@@ -38,7 +38,7 @@ async def insert_invoice(order_id, discord_id, amount, payment_url, status):
             result = await cursor.fetchone()
         if result is None:
             sql = """
-                INSERT INTO invoices (order_id, discord_id, amount_usd, stripe_url, status)
+                INSERT INTO invoices (order_id, customer_id, amount_usd, stripe_url, status)
                 VALUES (?, ?, ?, ?, ?)
             """
             await db.execute(sql, (order_id, discord_id, amount, payment_url, status))
